@@ -20,8 +20,24 @@ local function checkCharacter()
     return lp.Character and lp.Character:FindFirstChild("Humanoid") and lp.Character.Humanoid.Health > 0 and lp.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- Kiểm tra level
+-- Kiểm tra level với xử lý lỗi leaderstats
 local function getLevel()
+    -- Thêm kiểm tra leaderstats
+    if not lp:FindFirstChild("leaderstats") then
+        -- Tạo tạm thời một giá trị để tránh lỗi
+        local stats = Instance.new("Folder")
+        stats.Name = "leaderstats"
+        stats.Parent = lp
+        
+        local level = Instance.new("IntValue")
+        level.Name = "Level"
+        level.Value = 0
+        level.Parent = stats
+        
+        notify("⚠️ Cảnh báo", "Đã tạo leaderstats tạm thời", 3)
+        return 0
+    end
+    
     if lp.leaderstats and lp.leaderstats:FindFirstChild("Level") then
         return lp.leaderstats.Level.Value
     end
@@ -81,17 +97,26 @@ MainTab:CreateToggle({
 
                     for _, target in pairs(targets) do
                         if not _G.AutoFarmCriminal then break end
+                        if not checkCharacter() then break end
                         notify("⚔️ Auto Farm", "Đang tấn công: " .. target.Name, 2)
 
                         local hrp = lp.Character.HumanoidRootPart
                         local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -3)
 
-                        local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
-                        tween:Play()
-                        tween.Completed:Wait()
+                        -- Sử dụng pcall để xử lý lỗi tween
+                        pcall(function()
+                            local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
+                            tween:Play()
+                            tween.Completed:Wait()
+                        end)
 
-                        local args = {CFrame.new(target.HumanoidRootPart.Position)}
-                        lp.Character.DekuOFA.E:FireServer(unpack(args))
+                        -- Kiểm tra lại nhân vật trước khi tấn công
+                        if checkCharacter() and hasQuirk("DekuOFA") then
+                            pcall(function()
+                                local args = {CFrame.new(target.HumanoidRootPart.Position)}
+                                lp.Character.DekuOFA.E:FireServer(unpack(args))
+                            end)
+                        end
                         task.wait(0.5) -- Giảm tần suất để tránh anti-cheat
                     end
                 end)
@@ -133,17 +158,22 @@ MainTab:CreateToggle({
 
                     for _, target in pairs(targets) do
                         if not _G.AutoFarmWeakVillain then break end
+                        if not checkCharacter() then break end
                         notify("⚔️ Auto Farm", "Đang tấn công: " .. target.Name, 2)
 
-                        local hrp = lp.Character.HumanoidRootPart
-                        local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -3)
+                        pcall(function()
+                            local hrp = lp.Character.HumanoidRootPart
+                            local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -3)
 
-                        local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
-                        tween:Play()
-                        tween.Completed:Wait()
+                            local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
+                            tween:Play()
+                            tween.Completed:Wait()
 
-                        local args = {CFrame.new(target.HumanoidRootPart.Position)}
-                        lp.Character.DekuOFA.E:FireServer(unpack(args))
+                            if checkCharacter() and hasQuirk("DekuOFA") then
+                                local args = {CFrame.new(target.HumanoidRootPart.Position)}
+                                lp.Character.DekuOFA.E:FireServer(unpack(args))
+                            end
+                        end)
                         task.wait(0.5)
                     end
                 end)
@@ -168,8 +198,10 @@ MainTab:CreateToggle({
                         task.wait(1)
                     end
 
-                    if getLevel() < 300 then
-                        notify("⚠️ Lỗi", "Yêu cầu level 300+ để farm boss!", 4)
+                    -- Sử dụng hàm getLevel đã cải tiến
+                    local level = getLevel()
+                    if level < 300 then
+                        notify("⚠️ Lỗi", "Yêu cầu level 300+ để farm boss! (Hiện tại: " .. level .. ")", 4)
                         _G.AutoFarmBoss = false
                         return
                     end
@@ -192,17 +224,22 @@ MainTab:CreateToggle({
 
                     for _, target in pairs(targets) do
                         if not _G.AutoFarmBoss then break end
+                        if not checkCharacter() then break end
                         notify("⚔️ Auto Farm Boss", "Đang tấn công: " .. target.Name, 2)
 
-                        local hrp = lp.Character.HumanoidRootPart
-                        local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -5) -- Đứng xa hơn vì boss mạnh
+                        pcall(function()
+                            local hrp = lp.Character.HumanoidRootPart
+                            local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -5) -- Đứng xa hơn vì boss mạnh
 
-                        local tween = TweenService:Create(hrp, TweenInfo.new(0.7, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
-                        tween:Play()
-                        tween.Completed:Wait()
+                            local tween = TweenService:Create(hrp, TweenInfo.new(0.7, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
+                            tween:Play()
+                            tween.Completed:Wait()
 
-                        local args = {CFrame.new(target.HumanoidRootPart.Position)}
-                        lp.Character.DekuOFA.E:FireServer(unpack(args))
+                            if checkCharacter() and hasQuirk("DekuOFA") then
+                                local args = {CFrame.new(target.HumanoidRootPart.Position)}
+                                lp.Character.DekuOFA.E:FireServer(unpack(args))
+                            end
+                        end)
                         task.wait(0.7) -- Độ trễ lớn hơn vì boss cần đánh lâu
                     end
                 end)
@@ -226,26 +263,71 @@ MainTab:CreateToggle({
 
         local function getQuestForLevel()
             local level = getLevel()
-            for _, quest in ipairs(questMap) do
+            -- Lặp ngược để lấy quest phù hợp nhất với level
+            for i = #questMap, 1, -1 do
+                local quest = questMap[i]
                 if level >= quest.minLevel then
                     return quest.name
                 end
             end
-            return nil
+            return questMap[1].name -- Trả về quest thấp nhất nếu không tìm thấy
         end
 
         local function startQuest(questName)
             local success, result = pcall(function()
+                local remotes = ReplicatedStorage:FindFirstChild("Questing")
+                if not remotes then
+                    notify("⚠️ Lỗi", "Không tìm thấy Questing trong ReplicatedStorage!", 4)
+                    return false
+                end
+                
+                local networking = remotes:FindFirstChild("Networking")
+                if not networking then
+                    notify("⚠️ Lỗi", "Không tìm thấy Networking!", 4)
+                    return false
+                end
+                
+                local questRemotes = networking:FindFirstChild("Remotes")
+                if not questRemotes then
+                    notify("⚠️ Lỗi", "Không tìm thấy Remotes!", 4)
+                    return false
+                end
+                
+                local startQuestRemote = questRemotes:FindFirstChild("QUESTING_START_QUEST")
+                if not startQuestRemote then
+                    notify("⚠️ Lỗi", "Không tìm thấy QUESTING_START_QUEST!", 4)
+                    return false
+                end
+                
                 local args = {questName}
-                ReplicatedStorage:WaitForChild("Questing"):WaitForChild("Networking"):WaitForChild("Remotes"):WaitForChild("QUESTING_START_QUEST"):FireServer(unpack(args))
+                startQuestRemote:FireServer(unpack(args))
+                return true
             end)
-            notify("🧾 Auto Quest", success and "Bắt đầu quest: " .. questName or "Quest không tồn tại!", 3)
-            return success
+            
+            if success and result then
+                notify("🧾 Auto Quest", "Bắt đầu quest: " .. questName, 3)
+                return true
+            else
+                notify("⚠️ Lỗi", "Không thể bắt đầu quest: " .. questName, 3)
+                return false
+            end
         end
 
         local function isQuestComplete()
             local success, result = pcall(function()
-                return ReplicatedStorage:WaitForChild("Questing"):WaitForChild("Networking"):WaitForChild("Remotes"):WaitForChild("QUESTING_IS_QUEST_COMPLETE"):InvokeServer()
+                local remotes = ReplicatedStorage:FindFirstChild("Questing")
+                if not remotes then return false end
+                
+                local networking = remotes:FindFirstChild("Networking")
+                if not networking then return false end
+                
+                local questRemotes = networking:FindFirstChild("Remotes")
+                if not questRemotes then return false end
+                
+                local completeQuestRemote = questRemotes:FindFirstChild("QUESTING_IS_QUEST_COMPLETE")
+                if not completeQuestRemote then return false end
+                
+                return completeQuestRemote:InvokeServer()
             end)
             return success and result
         end
@@ -260,15 +342,27 @@ MainTab:CreateToggle({
             end
         end
 
-        lp.CharacterAdded:Connect(onRespawn)
+        -- Kết nối sự kiện respawn
+        if state then
+            -- Ngắt kết nối cũ nếu có để tránh duplicate
+            if _G.respawnConnection then
+                _G.respawnConnection:Disconnect()
+            end
+            _G.respawnConnection = lp.CharacterAdded:Connect(onRespawn)
+        else
+            if _G.respawnConnection then
+                _G.respawnConnection:Disconnect()
+                _G.respawnConnection = nil
+            end
+        end
 
         if _G.AutoQuest then
             task.spawn(function()
+                task.wait(1) -- Đảm bảo đã load xong
                 local questName = getQuestForLevel()
                 if not questName then
-                    notify("⚠️ Lỗi", "Không tìm thấy quest phù hợp với level!", 4)
-                    _G.AutoQuest = false
-                    return
+                    notify("⚠️ Cảnh báo", "Không tìm thấy quest phù hợp, sử dụng mặc định", 4)
+                    questName = questMap[1].name
                 end
                 startQuest(questName)
 
@@ -276,9 +370,11 @@ MainTab:CreateToggle({
                     if isQuestComplete() then
                         notify("✅ Quest", "Quest hoàn thành! Reset để nhận lại.", 3)
                         if checkCharacter() then
-                            lp.Character.Humanoid:TakeDamage(lp.Character.Humanoid.Health)
+                            pcall(function()
+                                lp.Character.Humanoid.Health = 0
+                            end)
                         end
-                        task.wait(2)
+                        task.wait(3) -- Đợi lâu hơn để đảm bảo respawn hoàn tất
                         questName = getQuestForLevel()
                         if questName then
                             startQuest(questName)
@@ -307,15 +403,46 @@ SettingsTab:CreateButton({
             end)
 
             if success and response and response.data then
+                local validServers = {}
                 for _, server in ipairs(response.data) do
                     if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                        TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, lp)
-                        return
+                        table.insert(validServers, server)
                     end
                 end
-                notify("❌ Lỗi", "Không tìm thấy server mới!", 4)
+                
+                if #validServers > 0 then
+                    -- Chọn ngẫu nhiên một server từ danh sách
+                    local randomServer = validServers[math.random(1, #validServers)]
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer.id, lp)
+                    return
+                else
+                    notify("❌ Lỗi", "Không tìm thấy server phù hợp!", 4)
+                end
             else
                 notify("⚠️ Lỗi", "Không tải được danh sách server!", 4)
+            end
+        end)
+    end
+})
+
+-- Thêm nút để cố định leaderstats lỗi
+SettingsTab:CreateButton({
+    Name = "🔧 Sửa Lỗi Leaderstats",
+    Callback = function()
+        pcall(function()
+            if not lp:FindFirstChild("leaderstats") then
+                local stats = Instance.new("Folder")
+                stats.Name = "leaderstats"
+                stats.Parent = lp
+                
+                local level = Instance.new("IntValue")
+                level.Name = "Level"
+                level.Value = 0
+                level.Parent = stats
+                
+                notify("✅ Thành công", "Đã tạo leaderstats tạm thời", 3)
+            else
+                notify("ℹ️ Thông tin", "Leaderstats đã tồn tại", 3)
             end
         end)
     end
