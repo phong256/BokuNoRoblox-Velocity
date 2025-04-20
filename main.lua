@@ -157,9 +157,9 @@ MainTab:CreateToggle({
     end
 })
 
--- Auto Farm Monsters (Level 1000+)
+-- Auto Farm High-End Nomu
 MainTab:CreateToggle({
-    Name = "Auto Farm Monsters (Level 1000+)",
+    Name = "Auto Farm High-End Nomu",
     CurrentValue = false,
     Callback = function(state)
         _G.AutoFarmMonsters = state
@@ -178,7 +178,7 @@ MainTab:CreateToggle({
                         return
                     end
 
-                    local monsterNames = {"Dabi", "Midnight", "Muscular", "Gang Orca", "Weak Nomu", "High-End Nomu"}
+                    local monsterNames = {"High-End Nomu"}
                     local targets = {}
                     for _, v in pairs(workspace:GetDescendants()) do
                         if v:IsA("Model") and table.find(monsterNames, v.Name) and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
@@ -191,7 +191,7 @@ MainTab:CreateToggle({
                     for _, target in pairs(targets) do
                         if not _G.AutoFarmMonsters then break end
                         if not checkCharacter() then break end
-                        notify("⚔️ Auto Farm Monsters", "Đang tấn công: " .. target.Name, 2)
+                        notify("⚔️ Auto Farm High-End Nomu", "Đang tấn công: " .. target.Name, 2)
 
                         pcall(function()
                             local hrp = lp.Character.HumanoidRootPart
@@ -273,23 +273,15 @@ MainTab:CreateToggle({
     end
 })
 
--- Auto Quest
+-- Auto Quest (Chỉ nhận quest của Mirko)
 MainTab:CreateToggle({
-    Name = "Auto Quest",
+    Name = "Auto Quest (Mirko)",
     CurrentValue = false,
     Callback = function(state)
         _G.AutoQuest = state
-        local questMap = {
-            "QUEST_INJURED MAN_1",
-            "QUEST_AIZAWA_1",
-            "QUEST_ALL MIGHT_1"
-        }
+        local questName = "QUEST_MIRKO_1" -- Giả định tên quest của Mirko
 
-        local function getQuest()
-            return questMap[math.random(1, #questMap)]
-        end
-
-        local function startQuest(questName)
+        local function startQuest()
             local success, result = pcall(function()
                 local remotes = ReplicatedStorage:FindFirstChild("Questing")
                 if not remotes then
@@ -321,7 +313,7 @@ MainTab:CreateToggle({
             end)
             
             if success and result then
-                notify("🧾 Auto Quest", "Bắt đầu quest: " .. questName, 3)
+                notify("🧾 Auto Quest", "Bắt đầu quest của Mirko: " .. questName, 3)
                 return true
             else
                 notify("⚠️ Lỗi", "Không thể bắt đầu quest: " .. questName, 3)
@@ -351,10 +343,7 @@ MainTab:CreateToggle({
         local function onRespawn()
             if _G.AutoQuest then
                 task.wait(1)
-                local questName = getQuest()
-                if questName then
-                    startQuest(questName)
-                end
+                startQuest()
             end
         end
 
@@ -373,26 +362,18 @@ MainTab:CreateToggle({
         if _G.AutoQuest then
             task.spawn(function()
                 task.wait(1)
-                local questName = getQuest()
-                if not questName then
-                    notify("⚠️ Cảnh báo", "Không tìm thấy quest phù hợp, sử dụng mặc định", 4)
-                    questName = questMap[1]
-                end
-                startQuest(questName)
+                startQuest()
 
                 while _G.AutoQuest do
                     if isQuestComplete() then
-                        notify("✅ Quest", "Quest hoàn thành! Reset để nhận lại.", 3)
+                        notify("✅ Quest", "Quest của Mirko hoàn thành! Reset để nhận lại.", 3)
                         if checkCharacter() then
                             pcall(function()
                                 lp.Character.Humanoid.Health = 0
                             end)
                         end
                         task.wait(3)
-                        questName = getQuest()
-                        if questName then
-                            startQuest(questName)
-                        end
+                        startQuest()
                     end
                     task.wait(1)
                 end
