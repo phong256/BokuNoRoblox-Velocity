@@ -20,27 +20,52 @@ local function checkCharacter()
     return lp.Character and lp.Character:FindFirstChild("Humanoid") and lp.Character.Humanoid.Health > 0 and lp.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- Kiểm tra level với xử lý lỗi leaderstats
+-- Kiểm tra level với xử lý lỗi và tìm kiếm đa dạng
 local function getLevel()
-    -- Thêm kiểm tra leaderstats
-    if not lp:FindFirstChild("leaderstats") then
-        -- Tạo tạm thời một giá trị để tránh lỗi
-        local stats = Instance.new("Folder")
-        stats.Name = "leaderstats"
-        stats.Parent = lp
-        
-        local level = Instance.new("IntValue")
-        level.Name = "Level"
-        level.Value = 0
-        level.Parent = stats
-        
-        notify("⚠️ Cảnh báo", "Đã tạo leaderstats tạm thời", 3)
-        return 0
+    -- Đợi leaderstats khởi tạo (tối đa 10 giây)
+    local success, leaderstats = pcall(function()
+        return lp:WaitForChild("leaderstats", 10)
+    end)
+    if success and leaderstats then
+        -- Kiểm tra trong leaderstats với các tên có thể
+        local levelObj = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("Lvl") or leaderstats:FindFirstChild("PlayerLevel")
+        if levelObj then
+            if levelObj:IsA("IntValue") or levelObj:IsA("NumberValue") then
+                return levelObj.Value
+            elseif levelObj:IsA("StringValue") then
+                return tonumber(levelObj.Value) or 0
+            end
+        end
+    else
+        notify("⚠️ Lỗi", "Không tìm thấy leaderstats sau 10 giây!", 5)
     end
-    
-    if lp.leaderstats and lp.leaderstats:FindFirstChild("Level") then
-        return lp.leaderstats.Level.Value
+
+    -- Kiểm tra trong Attributes của LocalPlayer
+    local attrLevel = lp:GetAttribute("Level") or lp:GetAttribute("PlayerLevel") or lp:GetAttribute("Lvl")
+    if attrLevel then
+        local level = tonumber(attrLevel)
+        if level then
+            return level
+        end
     end
+
+    -- Kiểm tra trong PlayerGui (nếu level hiển thị trên UI)
+    if lp.PlayerGui then
+        local guiLevel = lp.PlayerGui:FindFirstChild("StatsGui", true) or lp.PlayerGui:FindFirstChild("PlayerStats", true)
+        if guiLevel then
+            local levelLabel = guiLevel:FindFirstChild("Level", true) or guiLevel:FindFirstChild("Lvl", true)
+            if levelLabel then
+                if levelLabel:IsA("TextLabel") then
+                    return tonumber(levelLabel.Text) or 0
+                elseif levelLabel:IsA("StringValue") then
+                    return tonumber(levelLabel.Value) or 0
+                end
+            end
+        end
+    end
+
+    -- Nếu không tìm thấy, thông báo lỗi chi tiết
+    notify("⚠️ Lỗi", "Không tìm thấy thông tin level! Kiểm tra leaderstats hoặc PlayerGui.", 5)
     return 0
 end
 
@@ -117,7 +142,7 @@ MainTab:CreateToggle({
                                 lp.Character.DekuOFA.E:FireServer(unpack(args))
                             end)
                         end
-                        task.wait(0.5) -- Giảm tần suất để tránh anti-cheat
+                        task.wait(0.5)
                     end
                 end)
                 task.wait(0.3)
@@ -198,10 +223,10 @@ MainTab:CreateToggle({
                         task.wait(1)
                     end
 
-                    -- Sử dụng hàm getLevel đã cải tiến
                     local level = getLevel()
                     if level < 300 then
                         notify("⚠️ Lỗi", "Yêu cầu level 300+ để farm boss! (Hiện tại: " .. level .. ")", 4)
+                        task.wait(4)
                         _G.AutoFarmBoss = false
                         return
                     end
@@ -212,7 +237,7 @@ MainTab:CreateToggle({
                         return
                     end
 
-                    local bossNames = {"Nomu", "All For One"} -- Cần kiểm tra tên boss thực tế
+                    local bossNames = {"Nomu", "All For One"}
                     local targets = {}
                     for _, v in pairs(workspace:GetDescendants()) do
                         if v:IsA("Model") and table.find(bossNames, v.Name) and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
@@ -229,7 +254,7 @@ MainTab:CreateToggle({
 
                         pcall(function()
                             local hrp = lp.Character.HumanoidRootPart
-                            local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -5) -- Đứng xa hơn vì boss mạnh
+                            local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -5)
 
                             local tween = TweenService:Create(hrp, TweenInfo.new(0.7, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
                             tween:Play()
@@ -240,7 +265,7 @@ MainTab:CreateToggle({
                                 lp.Character.DekuOFA.E:FireServer(unpack(args))
                             end
                         end)
-                        task.wait(0.7) -- Độ trễ lớn hơn vì boss cần đánh lâu
+                        task.wait(0.7)
                     end
                 end)
                 task.wait(0.5)
@@ -258,19 +283,18 @@ MainTab:CreateToggle({
         local questMap = {
             {name = "QUEST_INJURED MAN_1", minLevel = 1},
             {name = "QUEST_AIZAWA_1", minLevel = 100},
-            {name = "QUEST_ALL MIGHT_1", minLevel = 300} -- Cần kiểm tra tên quest thực tế
+            {name = "QUEST_ALL MIGHT_1", minLevel = 300}
         }
 
         local function getQuestForLevel()
             local level = getLevel()
-            -- Lặp ngược để lấy quest phù hợp nhất với level
             for i = #questMap, 1, -1 do
                 local quest = questMap[i]
                 if level >= quest.minLevel then
                     return quest.name
                 end
             end
-            return questMap[1].name -- Trả về quest thấp nhất nếu không tìm thấy
+            return questMap[1].name
         end
 
         local function startQuest(questName)
@@ -342,9 +366,7 @@ MainTab:CreateToggle({
             end
         end
 
-        -- Kết nối sự kiện respawn
         if state then
-            -- Ngắt kết nối cũ nếu có để tránh duplicate
             if _G.respawnConnection then
                 _G.respawnConnection:Disconnect()
             end
@@ -358,7 +380,7 @@ MainTab:CreateToggle({
 
         if _G.AutoQuest then
             task.spawn(function()
-                task.wait(1) -- Đảm bảo đã load xong
+                task.wait(1)
                 local questName = getQuestForLevel()
                 if not questName then
                     notify("⚠️ Cảnh báo", "Không tìm thấy quest phù hợp, sử dụng mặc định", 4)
@@ -374,7 +396,7 @@ MainTab:CreateToggle({
                                 lp.Character.Humanoid.Health = 0
                             end)
                         end
-                        task.wait(3) -- Đợi lâu hơn để đảm bảo respawn hoàn tất
+                        task.wait(3)
                         questName = getQuestForLevel()
                         if questName then
                             startQuest(questName)
@@ -395,7 +417,7 @@ SettingsTab:CreateButton({
     Callback = function()
         notify("🔄 Rejoin", "Đang tìm server mới...", 3)
         task.spawn(function()
-            task.wait(1) -- Đợi mạng ổn định
+            task.wait(1)
             local success, response = pcall(function()
                 return HttpService:JSONDecode(game:HttpGet(
                     "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
@@ -411,7 +433,6 @@ SettingsTab:CreateButton({
                 end
                 
                 if #validServers > 0 then
-                    -- Chọn ngẫu nhiên một server từ danh sách
                     local randomServer = validServers[math.random(1, #validServers)]
                     TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer.id, lp)
                     return
@@ -425,25 +446,11 @@ SettingsTab:CreateButton({
     end
 })
 
--- Thêm nút để cố định leaderstats lỗi
+-- Thêm nút debug để kiểm tra level
 SettingsTab:CreateButton({
-    Name = "🔧 Sửa Lỗi Leaderstats",
+    Name = "🔍 Kiểm Tra Level",
     Callback = function()
-        pcall(function()
-            if not lp:FindFirstChild("leaderstats") then
-                local stats = Instance.new("Folder")
-                stats.Name = "leaderstats"
-                stats.Parent = lp
-                
-                local level = Instance.new("IntValue")
-                level.Name = "Level"
-                level.Value = 0
-                level.Parent = stats
-                
-                notify("✅ Thành công", "Đã tạo leaderstats tạm thời", 3)
-            else
-                notify("ℹ️ Thông tin", "Leaderstats đã tồn tại", 3)
-            end
-        end)
+        local level = getLevel()
+        notify("ℹ️ Thông Tin", "Level hiện tại: " .. level, 5)
     end
 })
