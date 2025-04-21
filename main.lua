@@ -20,9 +20,15 @@ local function checkCharacter()
     return lp.Character and lp.Character:FindFirstChild("Humanoid") and lp.Character.Humanoid.Health > 0 and lp.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- Kiểm tra quirk
-local function hasQuirk(quirkName)
-    return lp.Character and lp.Character:FindFirstChild(quirkName)
+-- Kiểm tra quirk (Hỗ trợ nhiều quirk)
+local function getQuirk()
+    local supportedQuirks = {"DekuOFA", "Explosion", "Overhaul"} -- Thêm các quirk bạn muốn hỗ trợ
+    for _, quirkName in pairs(supportedQuirks) do
+        if lp.Character and lp.Character:FindFirstChild(quirkName) then
+            return lp.Character:FindFirstChild(quirkName)
+        end
+    end
+    return nil
 end
 
 -- Tạo cửa sổ GUI
@@ -56,8 +62,9 @@ MainTab:CreateToggle({
                         task.wait(1)
                     end
 
-                    if not hasQuirk("DekuOFA") then
-                        notify("⚠️ Lỗi", "Yêu cầu quirk DekuOFA!", 4)
+                    local quirk = getQuirk()
+                    if not quirk then
+                        notify("⚠️ Lỗi", "Yêu cầu một trong các quirk: DekuOFA, Explosion, Overhaul!", 4)
                         _G.AutoFarmCriminal = false
                         return
                     end
@@ -85,10 +92,10 @@ MainTab:CreateToggle({
                             tween.Completed:Wait()
                         end)
 
-                        if checkCharacter() and hasQuirk("DekuOFA") then
+                        if checkCharacter() and getQuirk() then
                             pcall(function()
                                 local args = {CFrame.new(target.HumanoidRootPart.Position)}
-                                lp.Character.DekuOFA.E:FireServer(unpack(args))
+                                quirk.E:FireServer(unpack(args))
                             end)
                         end
                         task.wait(0.5)
@@ -115,8 +122,9 @@ MainTab:CreateToggle({
                         task.wait(1)
                     end
 
-                    if not hasQuirk("DekuOFA") then
-                        notify("⚠️ Lỗi", "Yêu cầu quirk DekuOFA!", 4)
+                    local quirk = getQuirk()
+                    if not quirk then
+                        notify("⚠️ Lỗi", "Yêu cầu một trong các quirk: DekuOFA, Explosion, Overhaul!", 4)
                         _G.AutoFarmWeakVillain = false
                         return
                     end
@@ -143,9 +151,9 @@ MainTab:CreateToggle({
                             tween:Play()
                             tween.Completed:Wait()
 
-                            if checkCharacter() and hasQuirk("DekuOFA") then
+                            if checkCharacter() and getQuirk() then
                                 local args = {CFrame.new(target.HumanoidRootPart.Position)}
-                                lp.Character.DekuOFA.E:FireServer(unpack(args))
+                                quirk.E:FireServer(unpack(args))
                             end
                         end)
                         task.wait(0.5)
@@ -157,7 +165,7 @@ MainTab:CreateToggle({
     end
 })
 
--- Auto Farm High-End Nomu
+-- Auto Farm High-End Nomu (Đã sửa)
 MainTab:CreateToggle({
     Name = "Auto Farm High-End Nomu",
     CurrentValue = false,
@@ -166,19 +174,23 @@ MainTab:CreateToggle({
         task.spawn(function()
             while _G.AutoFarmMonsters do
                 pcall(function()
+                    -- Kiểm tra nhân vật
                     if not checkCharacter() then
                         notify("⚠️ Lỗi", "Nhân vật chưa sẵn sàng!", 3)
                         repeat task.wait(0.5) until checkCharacter()
                         task.wait(1)
                     end
 
-                    if not hasQuirk("DekuOFA") then
-                        notify("⚠️ Lỗi", "Yêu cầu quirk DekuOFA!", 4)
+                    -- Kiểm tra quirk
+                    local quirk = getQuirk()
+                    if not quirk then
+                        notify("⚠️ Lỗi", "Yêu cầu một trong các quirk: DekuOFA, Explosion, Overhaul!", 4)
                         _G.AutoFarmMonsters = false
                         return
                     end
 
-                    local monsterNames = {"High-End Nomu"}
+                    -- Tìm High-End Nomu
+                    local monsterNames = {"High-End Nomu"} -- Kiểm tra tên chính xác bằng Dex Explorer nếu không tìm thấy
                     local targets = {}
                     for _, v in pairs(workspace:GetDescendants()) do
                         if v:IsA("Model") and table.find(monsterNames, v.Name) and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
@@ -188,25 +200,55 @@ MainTab:CreateToggle({
                         end
                     end
 
+                    -- Debug: In danh sách NPC nếu không tìm thấy High-End Nomu
+                    if #targets == 0 then
+                        notify("⚠️ Debug", "Không tìm thấy High-End Nomu! Kiểm tra tên hoặc khu vực (Ruined City).", 5)
+                        local npcList = {}
+                        for _, v in pairs(workspace:GetDescendants()) do
+                            if v:IsA("Model") and v:FindFirstChild("Humanoid") then
+                                table.insert(npcList, v.Name)
+                            end
+                        end
+                        if #npcList > 0 then
+                            notify("⚠️ Debug", "Danh sách NPC trong workspace: " .. table.concat(npcList, ", "), 5)
+                        else
+                            notify("⚠️ Debug", "Không có NPC nào trong workspace!", 5)
+                        end
+                        task.wait(5)
+                    end
+
+                    -- Tấn công từng mục tiêu
                     for _, target in pairs(targets) do
                         if not _G.AutoFarmMonsters then break end
                         if not checkCharacter() then break end
                         notify("⚔️ Auto Farm High-End Nomu", "Đang tấn công: " .. target.Name, 2)
 
-                        pcall(function()
-                            local hrp = lp.Character.HumanoidRootPart
-                            local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -3)
-
-                            local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
-                            tween:Play()
-                            tween.Completed:Wait()
-
-                            if checkCharacter() and hasQuirk("DekuOFA") then
-                                local args = {CFrame.new(target.HumanoidRootPart.Position)}
-                                lp.Character.DekuOFA.E:FireServer(unpack(args))
+                        -- Cập nhật vị trí liên tục để tránh mục tiêu di chuyển
+                        local maxAttempts = 10
+                        for i = 1, maxAttempts do
+                            if not target.Parent or not target:FindFirstChild("HumanoidRootPart") or target.Humanoid.Health <= 0 then
+                                break
                             end
-                        end)
-                        task.wait(0.5)
+
+                            pcall(function()
+                                local hrp = lp.Character.HumanoidRootPart
+                                local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -3)
+                                local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
+                                tween:Play()
+                                tween.Completed:Wait()
+
+                                if checkCharacter() and getQuirk() then
+                                    local success, err = pcall(function()
+                                        local args = {CFrame.new(target.HumanoidRootPart.Position)}
+                                        quirk.E:FireServer(unpack(args))
+                                    end)
+                                    if not success then
+                                        notify("⚠️ Debug", "Lỗi khi gọi skill: " .. tostring(err), 3)
+                                    end
+                                end
+                            end)
+                            task.wait(0.5)
+                        end
                     end
                 end)
                 task.wait(0.3)
@@ -230,8 +272,9 @@ MainTab:CreateToggle({
                         task.wait(1)
                     end
 
-                    if not hasQuirk("DekuOFA") then
-                        notify("⚠️ Lỗi", "Yêu cầu quirk DekuOFA!", 4)
+                    local quirk = getQuirk()
+                    if not quirk then
+                        notify("⚠️ Lỗi", "Yêu cầu một trong các quirk: DekuOFA, Explosion, Overhaul!", 4)
                         _G.AutoFarmBoss = false
                         return
                     end
@@ -259,9 +302,9 @@ MainTab:CreateToggle({
                             tween:Play()
                             tween.Completed:Wait()
 
-                            if checkCharacter() and hasQuirk("DekuOFA") then
+                            if checkCharacter() and getQuirk() then
                                 local args = {CFrame.new(target.HumanoidRootPart.Position)}
-                                lp.Character.DekuOFA.E:FireServer(unpack(args))
+                                quirk.E:FireServer(unpack(args))
                             end
                         end)
                         task.wait(0.7)
@@ -273,13 +316,13 @@ MainTab:CreateToggle({
     end
 })
 
--- Auto Quest (Chỉ nhận quest của Mirko)
+-- Auto Quest (Mirko)
 MainTab:CreateToggle({
-    Name = "Auto Quest (Mirko)",
+    Name = "Auto Quest (Mirko - High-End Nomu)",
     CurrentValue = false,
     Callback = function(state)
         _G.AutoQuest = state
-        local questName = "QUEST_MIRKO_1" -- Giả định tên quest của Mirko
+        local questName = "QUEST_MIRKO_1"
 
         local function startQuest()
             local success, result = pcall(function()
@@ -313,10 +356,10 @@ MainTab:CreateToggle({
             end)
             
             if success and result then
-                notify("🧾 Auto Quest", "Bắt đầu quest của Mirko: " .. questName, 3)
+                notify("🧾 Auto Quest", "Bắt đầu quest của Mirko: Đánh bại 10-15 High-End Nomu", 3)
                 return true
             else
-                notify("⚠️ Lỗi", "Không thể bắt đầu quest: " .. questName, 3)
+                notify("⚠️ Lỗi", "Không thể bắt đầu quest: " .. questName .. ". Kiểm tra tên quest!", 3)
                 return false
             end
         end
@@ -366,7 +409,7 @@ MainTab:CreateToggle({
 
                 while _G.AutoQuest do
                     if isQuestComplete() then
-                        notify("✅ Quest", "Quest của Mirko hoàn thành! Reset để nhận lại.", 3)
+                        notify("✅ Quest", "Quest của Mirko hoàn thành! Nhận 500,000 EXP và $7,500 Cash. Reset để nhận lại.", 3)
                         if checkCharacter() then
                             pcall(function()
                                 lp.Character.Humanoid.Health = 0
