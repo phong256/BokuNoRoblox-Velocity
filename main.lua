@@ -165,13 +165,13 @@ MainTab:CreateToggle({
     end
 })
 
--- Auto Farm High-End Nomu (Đã sửa)
+-- Auto Farm High End 3 (Đã sửa)
 MainTab:CreateToggle({
-    Name = "Auto Farm High-End Nomu",
+    Name = "Auto Farm High End 3",
     CurrentValue = false,
     Callback = function(state)
         _G.AutoFarmMonsters = state
-        notify("📍 Lưu ý", "Hãy đảm bảo bạn đang ở Ruined City để farm High-End Nomu!", 5)
+        notify("📍 Lưu ý", "Hãy đảm bảo bạn đang ở Ruined City để farm High End 3!", 5)
         task.spawn(function()
             while _G.AutoFarmMonsters do
                 pcall(function()
@@ -189,8 +189,8 @@ MainTab:CreateToggle({
                         return
                     end
 
-                    -- Tìm High-End Nomu
-                    local monsterNames = {"High-End Nomu", "High End Nomu", "HighEndNomu"} -- Thử nhiều tên biến thể
+                    -- Tìm High End 3
+                    local monsterNames = {"High End 3"} -- Chỉ tìm High End 3
                     local targets = {}
                     for _, v in pairs(workspace:GetDescendants()) do
                         if v:IsA("Model") and table.find(monsterNames, v.Name) and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
@@ -200,9 +200,9 @@ MainTab:CreateToggle({
                         end
                     end
 
-                    -- Debug: In danh sách NPC nếu không tìm thấy High-End Nomu
+                    -- Debug: In danh sách NPC nếu không tìm thấy High End 3
                     if #targets == 0 then
-                        notify("⚠️ Debug", "Không tìm thấy High-End Nomu! Đảm bảo bạn ở Ruined City.", 5)
+                        notify("⚠️ Debug", "Không tìm thấy High End 3! Đảm bảo bạn ở Ruined City.", 5)
                         local npcList = {}
                         for _, v in pairs(workspace:GetDescendants()) do
                             if v:IsA("Model") and v:FindFirstChild("Humanoid") then
@@ -221,7 +221,7 @@ MainTab:CreateToggle({
                     for _, target in pairs(targets) do
                         if not _G.AutoFarmMonsters then break end
                         if not checkCharacter() then break end
-                        notify("⚔️ Auto Farm High-End Nomu", "Đang tấn công: " .. target.Name, 2)
+                        notify("⚔️ Auto Farm High End 3", "Đang tấn công: " .. target.Name, 2)
 
                         -- Cập nhật vị trí liên tục để tránh mục tiêu di chuyển
                         local maxAttempts = 10
@@ -232,7 +232,7 @@ MainTab:CreateToggle({
 
                             pcall(function()
                                 local hrp = lp.Character.HumanoidRootPart
-                                local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, -3)
+                                local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 3, -2) -- Điều chỉnh khoảng cách
                                 local tween = TweenService:Create(hrp, TweenInfo.new(0.7, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
                                 tween:Play()
                                 tween.Completed:Wait()
@@ -318,7 +318,7 @@ MainTab:CreateToggle({
 
 -- Auto Quest (Mirko)
 MainTab:CreateToggle({
-    Name = "Auto Quest (Mirko - High-End Nomu)",
+    Name = "Auto Quest (Mirko - High End 3)",
     CurrentValue = false,
     Callback = function(state)
         _G.AutoQuest = state
@@ -356,7 +356,7 @@ MainTab:CreateToggle({
             end)
             
             if success and result then
-                notify("🧾 Auto Quest", "Bắt đầu quest của Mirko: Đánh bại 10-15 High-End Nomu", 3)
+                notify("🧾 Auto Quest", "Bắt đầu quest của Mirko: Đánh bại 10-15 High End 3", 3)
                 return true
             else
                 notify("⚠️ Lỗi", "Không thể bắt đầu quest: " .. questName .. ". Kiểm tra tên quest!", 3)
