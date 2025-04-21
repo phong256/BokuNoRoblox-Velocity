@@ -165,7 +165,7 @@ MainTab:CreateToggle({
     end
 })
 
--- Auto Farm High End 3 (Đã sửa)
+-- Auto Farm High End 3
 MainTab:CreateToggle({
     Name = "Auto Farm High End 3",
     CurrentValue = false,
@@ -316,7 +316,7 @@ MainTab:CreateToggle({
     end
 })
 
--- Auto Quest (Mirko)
+-- Auto Quest (Mirko - High End 3) (Đã sửa để tự động nhận lại quest)
 MainTab:CreateToggle({
     Name = "Auto Quest (Mirko - High End 3)",
     CurrentValue = false,
@@ -409,14 +409,9 @@ MainTab:CreateToggle({
 
                 while _G.AutoQuest do
                     if isQuestComplete() then
-                        notify("✅ Quest", "Quest của Mirko hoàn thành! Nhận 500,000 EXP và $7,500 Cash. Reset để nhận lại.", 3)
-                        if checkCharacter() then
-                            pcall(function()
-                                lp.Character.Humanoid.Health = 0
-                            end)
-                        end
-                        task.wait(3)
-                        startQuest()
+                        notify("✅ Quest", "Quest của Mirko hoàn thành! Nhận 500,000 EXP và $7,500 Cash. Tự động nhận lại quest.", 3)
+                        task.wait(1) -- Chờ một chút để đảm bảo quest được hoàn thành
+                        startQuest() -- Tự động nhận lại quest ngay lập tức
                     end
                     task.wait(1)
                 end
