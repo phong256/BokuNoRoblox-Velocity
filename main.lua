@@ -171,35 +171,14 @@ MainTab:CreateToggle({
     CurrentValue = false,
     Callback = function(state)
         _G.AutoFarmMonsters = state
+        notify("📍 Lưu ý", "Hãy đảm bảo bạn đang ở Ruined City để farm High-End Nomu!", 5)
         task.spawn(function()
-            -- Tự động di chuyển đến Ruined City
-            local ruinedCityPosition = Vector3.new(500, 50, 500) -- Tọa độ giả định, cần thay bằng tọa độ thực tế của Ruined City
-            if checkCharacter() then
-                local hrp = lp.Character.HumanoidRootPart
-                hrp.CFrame = CFrame.new(ruinedCityPosition)
-                notify("📍 Di chuyển", "Đã dịch chuyển đến Ruined City!", 3)
-                task.wait(2)
-            end
-
             while _G.AutoFarmMonsters do
                 pcall(function()
                     -- Kiểm tra nhân vật
                     if not checkCharacter() then
-                        notify("⚠️ Lỗi", "Nhân vật chưa sẵn sàng! Đang hồi sinh...", 3)
-                        repeat
-                            if lp.Character then
-                                lp.Character:Destroy() -- Hồi sinh nhân vật
-                            end
-                            task.wait(1)
-                        until checkCharacter()
-                        task.wait(1)
-                        -- Di chuyển lại đến Ruined City sau khi hồi sinh
-                        if checkCharacter() then
-                            local hrp = lp.Character.HumanoidRootPart
-                            hrp.CFrame = CFrame.new(ruinedCityPosition)
-                            notify("📍 Di chuyển", "Đã dịch chuyển lại đến Ruined City!", 3)
-                            task.wait(2)
-                        end
+                        notify("⚠️ Lỗi", "Nhân vật chưa sẵn sàng! Script sẽ dừng nếu nhân vật chết.", 3)
+                        return
                     end
 
                     -- Kiểm tra quirk
@@ -223,7 +202,7 @@ MainTab:CreateToggle({
 
                     -- Debug: In danh sách NPC nếu không tìm thấy High-End Nomu
                     if #targets == 0 then
-                        notify("⚠️ Debug", "Không tìm thấy High-End Nomu! Kiểm tra khu vực (Ruined City).", 5)
+                        notify("⚠️ Debug", "Không tìm thấy High-End Nomu! Đảm bảo bạn ở Ruined City.", 5)
                         local npcList = {}
                         for _, v in pairs(workspace:GetDescendants()) do
                             if v:IsA("Model") and v:FindFirstChild("Humanoid") then
@@ -259,19 +238,12 @@ MainTab:CreateToggle({
                                 tween.Completed:Wait()
 
                                 if checkCharacter() and getQuirk() then
-                                    -- Thử nhiều skill
-                                    local skills = {"E", "Q", "F"}
-                                    for _, skill in pairs(skills) do
-                                        local success, err = pcall(function()
-                                            local args = {CFrame.new(target.HumanoidRootPart.Position)}
-                                            quirk[skill]:FireServer(unpack(args))
-                                        end)
-                                        if success then
-                                            notify("✅ Skill", "Sử dụng skill " .. skill .. " thành công!", 2)
-                                            break
-                                        else
-                                            notify("⚠️ Debug", "Lỗi khi gọi skill " .. skill .. ": " .. tostring(err), 3)
-                                        end
+                                    local success, err = pcall(function()
+                                        local args = {CFrame.new(target.HumanoidRootPart.Position)}
+                                        quirk.E:FireServer(unpack(args))
+                                    end)
+                                    if not success then
+                                        notify("⚠️ Debug", "Lỗi khi gọi skill E: " .. tostring(err), 3)
                                     end
                                 end
                             end)
@@ -279,7 +251,7 @@ MainTab:CreateToggle({
                         end
                     end
                 end)
-                task.wait(0.5) -- Tăng thời gian chờ giữa các lần lặp
+                task.wait(0.5)
             end
         end)
     end
