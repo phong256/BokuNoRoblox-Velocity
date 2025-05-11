@@ -5,10 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 
--- ป้องกันซ้ำซ้อน
-shared.Flags = shared.Flags or {}
-
-
 -- ตำแหน่งเป้าหมาย
 local TargetPositions = {
     ["Criminal"] = Vector3.new(808.185, 330.235, 295.545),
@@ -34,7 +30,6 @@ local TargetPositions = {
     ["Gang Orca"] = Vector3.new(1420.182, 330.475, 591.197),
     ["Mount Lady"] = Vector3.new(-495.443, 330.462, 624.299),
     ["Endeavor"] = Vector3.new(-512.884, 330.466, -281.769),
-    ["All Might"] = Vector3.new(1134.851, 330.147, 1101.128),
     ["Hawks"] = Vector3.new(-489.134, 330.365, 4331.164),
     ["Deku"] = Vector3.new(751.982, 329.967, 4363.521),
 }
@@ -42,59 +37,21 @@ local TargetPositions = {
 -- ฟังก์ชันวาร์ป
 local function teleportTo(position)
     if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        lp.Character:MoveTo(position)
+        lp.Character.HumanoidRootPart.CFrame = CFrame.new(position)
     end
 end
 
 -- ฟังก์ชันจำลองคลิก (รองรับทั้ง PC และมือถือ)
 local function clickMouse()
     local char = lp.Character
-    if char then
-        local playerModel = workspace:FindFirstChild(lp.Name)
-        if playerModel then
-            local main = playerModel:FindFirstChild("Main")
-            if main then
-                local swing = main:FindFirstChild("Swing")
-                if swing and typeof(swing) == "Instance" and swing:IsA("RemoteEvent") then
-                    swing:FireServer()
-                else
-                    warn("❌ ไม่พบ RemoteEvent: Swing หรือชนิดไม่ถูกต้อง")
-                end
-            else
-                warn("❌ ไม่พบ Main ใต้โมเดลผู้เล่น")
-            end
-        else
-            warn("❌ ไม่พบโมเดลผู้เล่นใน workspace")
+    if char and workspace:FindFirstChild(lp.Name) then
+        local swingEvent = workspace[lp.Name]:FindFirstChild("Main")
+        if swingEvent and swingEvent:FindFirstChild("Swing") then
+            swingEvent.Swing:FireServer()
         end
-    else
-        warn("❌ ตัวละครยังไม่โหลด")
     end
 end
 
--- กำหนดเวลา Timeout (เช่น 5 วินาที)
-local timeout = 5
-local lastFireTime = tick()
-
--- ฟังก์ชันที่ควบคุมการ FireServer เพื่อไม่ให้วนลูปไม่สิ้นสุด
-local function safelyFireServer(eventName, args)
-    -- ตรวจสอบว่าผ่านเวลา timeout แล้วหรือยัง
-    if tick() - lastFireTime > timeout then
-        lastFireTime = tick()  -- อัปเดตเวลาเมื่อ FireServer ถูกเรียก
-        if not shared.Flags[eventName] then
-            shared.Flags[eventName] = true
-            local success, result = pcall(function()
-                ReplicatedStorage:WaitForChild("Networking"):WaitForChild("Remotes"):WaitForChild(eventName):FireServer(unpack(args))
-            end)
-            if not success then
-                warn("Error firing server event:", result)
-            end
-            -- ปิด flag หลังจากทำงานเสร็จ
-            shared.Flags[eventName] = false
-        end
-    else
-        warn("❌ ไม่สามารถ FireServer ได้ในขณะนี้ (กำลังรอ timeout)")
-    end
-end
 
 -- เริ่มต้น GUI
 local Window = Rayfield:CreateWindow({
@@ -155,7 +112,6 @@ FlyTab:CreateButton({ Name = "Fly to Midnight", Callback = function() teleportTo
 FlyTab:CreateButton({ Name = "Fly to Gang Orca", Callback = function() teleportTo(TargetPositions["Gang Orca"]) end })
 FlyTab:CreateButton({ Name = "Fly to Mount Lady", Callback = function() teleportTo(TargetPositions["Mount Lady"]) end })
 FlyTab:CreateButton({ Name = "Fly to Endeavor", Callback = function() teleportTo(TargetPositions["Endeavor"]) end })
-FlyTab:CreateButton({ Name = "Fly to All Might", Callback = function() teleportTo(TargetPositions["All Might"]) end })
 FlyTab:CreateButton({ Name = "Fly to Hawks", Callback = function() teleportTo(TargetPositions["Hawks"]) end })
 FlyTab:CreateButton({ Name = "Fly to Deku", Callback = function() teleportTo(TargetPositions["Deku"]) end })
 
@@ -165,48 +121,33 @@ FlyTab:CreateButton({ Name = "Fly to Deku", Callback = function() teleportTo(Tar
 ----------------------------
 local MainTab = Window:CreateTab("⚔️ Main")
 
--- ฟังก์ชัน Auto Farm ที่จะวนลูปในกรณีที่ toggle เปิด
-local function autoFarmNPC(targetNames, toggleFlagName, displayName)
-    -- เริ่มต้น flag เป็น false
-    shared.Flags[toggleFlagName] = false
+-- แก้ teleportTo ให้ใช้ MoveTo() (วาร์ปแรงสุด)
+local function teleportTo(position)
+    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+        lp.Character:MoveTo(position)
+    end
+end
 
-    -- ใช้ toggle ในการควบคุมการทำงาน
+local function autoFarmNPC(targetNames, toggleFlagName, displayName)
+    _G[toggleFlagName] = false
+
     MainTab:CreateToggle({
         Name = "Auto Farm: " .. (displayName or table.concat(targetNames, ", ")),
         CurrentValue = false,
         Callback = function(state)
-            shared.Flags[toggleFlagName] = state
+            _G[toggleFlagName] = state
 
-            -- ใช้ task.spawn เพื่อให้การทำงานไม่บล็อกฟังก์ชันหลัก
             task.spawn(function()
-                while shared.Flags[toggleFlagName] do
+                while _G[toggleFlagName] do
                     pcall(function()
                         local char = lp.Character
-                        -- ตรวจสอบตัวละครและสุขภาพของมัน
                         if not char or not char:FindFirstChild("Humanoid") or char.Humanoid.Health <= 0 then
-                            -- รีโหลดตัวละครใหม่เมื่อมีการตาย
                             repeat task.wait(0.5) until lp.Character and lp.Character:FindFirstChild("Humanoid") and lp.Character.Humanoid.Health > 0
-                            -- วาปไปยังตำแหน่งฟาร์มหลังเกิดใหม่
                             teleportTo(TargetPositions[targetNames[1]])
-                            -- รอจนกว่าจะไม่มี ForceField
                             repeat task.wait(0.5) until not lp.Character:FindFirstChildOfClass("ForceField")
-                            -- รอให้ตัวละครเตรียมตัวเสร็จ
                             task.wait(0.5)
                         end
 
-                        -- เช็คตำแหน่งตัวละครและตำแหน่งฟาร์ม
-                        local farmPosition = TargetPositions[targetNames[1]]
-                        local characterPosition = lp.Character.HumanoidRootPart.Position
-                        local distanceToFarm = (farmPosition - characterPosition).Magnitude
-
-                        -- ถ้าห่างจากตำแหน่งฟาร์มมากกว่า 5 studs ให้วาปไปใหม่
-                        if distanceToFarm > 5 then
-                            teleportTo(farmPosition)
-                            -- รอจนกว่าจะไปถึงตำแหน่งฟาร์ม
-                            repeat task.wait(0.5) until (farmPosition - lp.Character.HumanoidRootPart.Position).Magnitude <= 5
-                        end
-
-                        -- หาเป้าหมายในการฟาร์ม
                         local targets = {}
                         for _, v in pairs(workspace.NPCs:GetDescendants()) do
                             if table.find(targetNames, v.Name) and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
@@ -216,38 +157,34 @@ local function autoFarmNPC(targetNames, toggleFlagName, displayName)
                             end
                         end
 
-                        -- วนลูปเพื่อโจมตีเป้าหมาย
                         for _, target in pairs(targets) do
-                            -- ตรวจสอบว่า flag ถูกเปิดใช้งานอยู่หรือไม่
-                            if not shared.Flags[toggleFlagName] then break end
+                            if not _G[toggleFlagName] then break end
                             if not lp.Character or not lp.Character:FindFirstChild("HumanoidRootPart") then break end
                             if lp.Character.Humanoid.Health <= 0 then break end
 
-                            -- วาร์ปไปยังเป้าหมาย
                             local hrp = lp.Character.HumanoidRootPart
                             local goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
                             local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
                             tween:Play()
                             tween.Completed:Wait()
 
-                            -- เพิ่มการเช็คว่าเป้าหมายห่างจากตัวละครหรือไม่ ถ้ามันห่างมากให้ตามไป
-                            local lastPosition = target.HumanoidRootPart.Position
-                            while target.Humanoid.Health > 0 and lp.Character and lp.Character:FindFirstChild("Humanoid") and lp.Character.Humanoid.Health > 0 do
-                                if (target.HumanoidRootPart.Position - lastPosition).Magnitude > 5 then
-                                    -- ถ้ามันห่างมากกว่า 5 stud ก็จะวาร์ปไปตามตำแหน่งใหม่
-                                    goalCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
-                                    tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = goalCFrame})
-                                    tween:Play()
-                                    tween.Completed:Wait()
-                                    lastPosition = target.HumanoidRootPart.Position
+                            if not lp.Character:FindFirstChild("DekuOFA") then
+                                while target.Humanoid.Health > 0 and lp.Character and lp.Character:FindFirstChild("Humanoid") and lp.Character.Humanoid.Health > 0 do
+                                    clickMouse()
+                                    task.wait(0.1)
                                 end
-                                clickMouse()
-                                task.wait(0.1)  -- ป้องกันการเรียกซ้ำเร็วเกินไป
+                            else
+                                local args = {[1] = CFrame.new(target.HumanoidRootPart.Position)}
+                                while target.Humanoid.Health > 0 and lp.Character and lp.Character:FindFirstChild("Humanoid") and lp.Character.Humanoid.Health > 0 do
+                                    clickMouse()
+                                    task.wait(1)
+                                end
+
                             end
                             task.wait(0.3)
                         end
                     end)
-                    task.wait(0.2)  -- ป้องกันการวนลูปบ่อยเกินไป
+                    task.wait(0.2)
                 end
             end)
         end
@@ -294,7 +231,6 @@ autoFarmNPC({"Midnight"}, "AutoFarmMidnight")
 autoFarmNPC({"Gang Orca"}, "AutoFarmGangOrca")
 autoFarmNPC({"Mount Lady"}, "AutoFarmMountLady")
 autoFarmNPC({"Endeavor"}, "AutoFarmEndeavor")
-autoFarmNPC({"All Might 1"}, "AutoFarmAllMight", "All Might")
 autoFarmNPC({"Hawks"}, "AutoFarmHawks")
 autoFarmNPC({"Deku"}, "AutoFarmDeku")
 
@@ -305,69 +241,34 @@ autoFarmNPC({"Deku"}, "AutoFarmDeku")
 local QuestTab = Window:CreateTab("📜 Quests")
 
 -- 🌐 ฟังก์ชันสร้าง Toggle (ย้ายขึ้นก่อน)
--- ฟังก์ชันเริ่มเควสใหม่
-local function startQuest(questName)
-    -- ส่งคำสั่งให้เริ่มเควส
-    ReplicatedStorage:WaitForChild("Questing"):WaitForChild("Networking"):WaitForChild("Remotes"):WaitForChild("QUESTING_START_QUEST"):FireServer(questName)
-end
-
--- ฟังก์ชันเช็คสถานะเควส
-local function isQuestActive(questName)
-    -- ตรวจสอบว่าเควสนี้ถูกเปิดอยู่หรือไม่ (ต้องดูข้อมูลจากเกมว่าเควสไหนอยู่ในสถานะ Active)
-    -- ตัวอย่างเช็คสถานะสามารถเป็นการตรวจสอบค่าจากเซิร์ฟเวอร์หรือข้อมูลที่มีอยู่
-    -- ถ้าไม่พบว่าเควสยัง active ก็จะรับใหม่
-    return shared.Flags[questName] == true
-end
-
--- ฟังก์ชันสร้าง Toggle
 local function createQuestToggles(quests)
     for _, q in pairs(quests) do
-        -- ใช้ flag ตามที่กำหนดไว้โดยไม่ต้องใช้ pattern match
-        local flagKey = q.flag
-        shared.Flags[flagKey] = false
-
-        local function handleQuestState()
-            -- เช็คว่าเควสนี้ถูกเปิดออโต้แล้วหรือไม่
-            if not isQuestActive(q.questName) then
-                -- ถ้ายังไม่เริ่มหรือถูกยกเลิกให้เริ่มเควสใหม่
-                startQuest(q.questName)
-            end
-        end
-
-        local charConnection
-        local toggleThread
+        _G[q.flag:match("_G%.(.+)")] = false
 
         QuestTab:CreateToggle({
             Name = q.toggleName,
             CurrentValue = false,
             Callback = function(state)
-                shared.Flags[flagKey] = state
+                _G[q.flag:match("_G%.(.+)")] = state
+
+                local function startQuest()
+                    ReplicatedStorage:WaitForChild("Questing"):WaitForChild("Networking"):WaitForChild("Remotes"):WaitForChild("QUESTING_START_QUEST"):FireServer(q.questName)
+                end
+
+                lp.CharacterAdded:Connect(function()
+                    if _G[q.flag:match("_G%.(.+)")] then
+                        task.wait(1)
+                        startQuest()
+                    end
+                end)
 
                 if state then
-                    -- ตั้งค่า CharacterAdded listener เฉพาะครั้งแรกที่ toggle เปิด
-                    if not charConnection or not charConnection.Connected then
-                        charConnection = lp.CharacterAdded:Connect(function()
-                            task.wait(1)
-                            if shared.Flags[flagKey] then
-                                handleQuestState()  -- เช็คสถานะของเควสและรับใหม่ถ้าไม่ได้เปิด
-                            end
-                        end)
-                    end
-
-                    -- สร้าง loop สำหรับการเริ่ม quest ซ้ำเมื่อ toggle เปิด
-                    toggleThread = task.spawn(function()
-                        while shared.Flags[flagKey] do
-                            handleQuestState()  -- เช็คสถานะและรับเควสถ้ายังไม่ได้รับ
+                    task.spawn(function()
+                        while _G[q.flag:match("_G%.(.+)")] do
+                            startQuest()
                             task.wait(1)
                         end
                     end)
-                else
-                    -- เมื่อ toggle ปิด ให้ยกเลิกการทำงานทั้งหมด
-                    shared.Flags[flagKey] = false
-                    if toggleThread then
-                        task.cancel(toggleThread)
-                        toggleThread = nil
-                    end
                 end
             end
         })
@@ -381,11 +282,11 @@ QuestTab:CreateParagraph({
 })
 
 local famePlusQuests = {
-    {flag = "AutoQuestLoop",     toggleName = "Auto Quest: Criminal",     questName = "QUEST_INJURED MAN_1"},
-    {flag = "AutoQuestAizawa",   toggleName = "Auto Quest: Weak Villain", questName = "QUEST_AIZAWA_1"},
-    {flag = "AutoQuestHero",     toggleName = "Auto Quest: Villain",      questName = "QUEST_HERO_1"},
-    {flag = "AutoQuestJeanist",  toggleName = "Auto Quest: Weak Nomu",    questName = "QUEST_JEANIST_1"},
-    {flag = "AutoQuestMirko",    toggleName = "Auto Quest: High End",     questName = "QUEST_MIRKO_1"},
+    {flag = "_G.AutoQuestLoop",     toggleName = "Auto Quest: Criminal",     questName = "QUEST_INJURED MAN_1"},
+    {flag = "_G.AutoQuestAizawa",   toggleName = "Auto Quest: Weak Villain", questName = "QUEST_AIZAWA_1"},
+    {flag = "_G.AutoQuestHero",     toggleName = "Auto Quest: Villain",      questName = "QUEST_HERO_1"},
+    {flag = "_G.AutoQuestJeanist",  toggleName = "Auto Quest: Weak Nomu",    questName = "QUEST_JEANIST_1"},
+    {flag = "_G.AutoQuestMirko",    toggleName = "Auto Quest: High End",     questName = "QUEST_MIRKO_1"},
 }
 createQuestToggles(famePlusQuests)
 
@@ -396,11 +297,11 @@ QuestTab:CreateParagraph({
 })
 
 local fameMinusQuests = {
-    {flag = "AutoQuestGangMember", toggleName = "Auto Quest: Police",        questName = "QUEST_GANG MEMBER_1"},
-    {flag = "AutoQuestSuperVillain", toggleName = "Auto Quest: Hero",       questName = "QUEST_VILLAIN_1"},
-    {flag = "AutoQuestSuspiciousChar", toggleName = "Auto Quest: UA Student", questName = "QUEST_SUSPICIOUS CHARACTER_1"},
-    {flag = "AutoQuestTwice", toggleName = "Auto Quest: Forest Beast",      questName = "QUEST_TWICE_1"},
-    {flag = "AutoQuestToga", toggleName = "Auto Quest: Pro Hero",           questName = "QUEST_TOGA_1"},
+    {flag = "_G.AutoQuestGangMember", toggleName = "Auto Quest: Police",        questName = "QUEST_GANG MEMBER_1"},
+    {flag = "_G.AutoQuestSuperVillain", toggleName = "Auto Quest: Hero",       questName = "QUEST_SUPER VILLAIN_1"},
+    {flag = "_G.AutoQuestSuspiciousChar", toggleName = "Auto Quest: UA Student", questName = "QUEST_SUSPICIOUS CHARACTER_1"},
+    {flag = "_G.AutoQuestTwice", toggleName = "Auto Quest: Forest Beast",      questName = "QUEST_TWICE_1"},
+    {flag = "_G.AutoQuestToga", toggleName = "Auto Quest: Pro Hero",           questName = "QUEST_TOGA_1"},
 }
 createQuestToggles(fameMinusQuests)
 
